@@ -1,89 +1,464 @@
-<!DOCTYPE html>
-<html lang="pt-br">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>TPL - Sistema Automatizado</title>
-    <!-- CSS completo incluído -->
-    <style>
-        body { font-family: sans-serif; margin: 20px; background-color: #f5f5f5; } h1, h2 { text-align: center; margin-bottom: 5px; } h1 { color: white; background-color: #c00000; padding: 10px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.2); } h2 { color: white; background-color: #ff8c00; padding: 8px; font-size: 1.1em; margin-bottom: 20px; border-radius: 6px; box-shadow: 0 1px 3px rgba(0,0,0,0.2); } #sync-controls { display: flex; justify-content: center; align-items: center; gap: 20px; padding: 15px; background-color: #e3f2fd; border: 1px solid #2196f3; border-radius: 8px; margin-bottom: 20px; } #syncStatus { font-weight: bold; color: #1565c0; } #user-status { text-align: center; margin-bottom: 15px; font-size: 0.9em; background: white; padding: 15px; border-radius: 6px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); } .user-id { color: #666; font-family: monospace; font-size: 0.8em; } .user-name { color: #2c5aa0; font-weight: bold; font-size: 1.2em; margin: 5px 0; } .name-setup { background: #e3f2fd; border: 2px dashed #2196f3; padding: 20px; margin: 15px 0; border-radius: 8px; text-align: center; } .name-setup input { padding: 10px 15px; border: 1px solid #ddd; border-radius: 4px; font-size: 1em; margin: 10px; width: 300px; } .name-setup button { padding: 10px 20px; background-color: #4CAF50; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 1em; } .name-setup button:hover { background-color: #45a049; } table { width: 100%; border-collapse: collapse; border: 2px solid black; box-shadow: 0 4px 8px rgba(0,0,0,0.1); background: white; border-radius: 8px; overflow: hidden; } th, td { border: 1px solid #a0a0a0; padding: 8px; text-align: left; vertical-align: top; } thead th { background-color: #fff2cc; font-weight: bold; text-align: center; border-bottom: 2px solid black; position: sticky; top: 0; z-index: 10; } .header-dia { width: 100px; } .header-dayofweek { width: 25px; } .header-time { width: 120px; } .header-obs { width: 150px; } tbody td { background-color: #ffffcc; } .date-cell, .day-of-week { background-color: #f2f2f2; font-weight: bold; text-align: center; vertical-align: middle; } .day-of-week { writing-mode: vertical-rl; transform: rotate(180deg); padding: 8px 2px; width: 25px; } .slot { display: block; min-height: 20px; border-bottom: 1px solid #ccc; margin-bottom: 2px; font-size: 0.9em; padding: 4px; cursor: pointer; border-radius: 4px; transition: all 0.3s ease; position: relative; } .slot.available { background-color: #e8f5e8; border: 1px dashed #4caf50; } .slot.available:hover { background-color: #c8e6c9; border-style: solid; transform: scale(1.02); } .slot.my-slot { background-color: #fff3e0; border: 1px solid #ff9800; color: #e65100; font-weight: 500; } .slot.my-slot:hover { background-color: #ffe0b2; box-shadow: 0 2px 4px rgba(255, 152, 0, 0.3); } .slot.taken { background-color: #e3f2fd; border: 1px solid #2196f3; color: #1565c0; cursor: not-allowed; } .past-date { opacity: 0.6; background-color: #eeeeee; } .past-date .slot, .past-slot { cursor: not-allowed !important; background-color: #eeeeee !important; color: #b0b0b0 !important; border-style: solid !important; border-color: #ddd !important; text-decoration: line-through; } .log-panel { position: fixed; bottom: 10px; right: 10px; background: rgba(0,0,0,0.8); color: #0f0; padding: 10px; border-radius: 8px; font-family: monospace; font-size: 10px; max-width: 350px; max-height: 150px; overflow-y: auto; z-index: 1000; opacity: 0; transition: opacity 0.5s; pointer-events: none;} .slot[draggable="true"] { cursor: grab !important; } .slot.dragging { opacity: 0.4; border: 2px dashed #c00000; } .slot.drop-target { background-color: #b3e5fc !important; border: 2px solid #01579b !important; }
-    </style>
-</head>
-<body>
-    <h1>TPL - Sistema Automatizado</h1>
-    <h2 id="monthTitle">Programação Semanal Permanente</h2>
-    <div id="sync-controls"> <div id="syncStatus">⚡ Conectando...</div> </div>
-    <div id="user-status"> <div class="user-name" id="userName">Configurar Nome</div> <div class="user-id">ID: <span id="deviceId"></span></div> </div>
-    <div id="nameSetup" class="name-setup">
-        <p><strong>Para participar, configure seu nome:</strong></p>
-        <input type="text" id="nameInput" placeholder="Digite seu nome" maxlength="30">
-        <button onclick="setupUser()">Salvar Nome</button>
-    </div>
-    <table id="scheduleTable">
-        <thead> <tr> <th class="header-dia">DIA</th><th class="header-dayofweek"></th> <th class="header-time">Manhã<br>7:00</th><th class="header-time">Manhã<br>9:00</th> <th class="header-time">Tarde<br>14:00</th><th class="header-time">Tardinha<br>16:00</th> <th class="header-time">Noite<br>18:00</th><th class="header-obs">Observações</th> </tr> </thead>
-        <tbody id="scheduleBody"></tbody>
-    </table>
-    <div class="log-panel" id="logPanel"></div>
+'use strict';
 
-    <script>
-        // --- CONFIGURAÇÃO DO APLICATIVO ---
-        const GITHUB_USER = 'EliezerRosa';
-        const GITHUB_REPO = 'tpl-sistema'; // ATENÇÃO: Verifique o nome do seu repositório
-        const ADMIN_USERNAME = 'Zico'; // 👑 Defina o nome de usuário do admin
-        const GITHUB_CLIENT_ID = 'Ov23liEwjAzKygVLClRS'; // 🔑 Cole o Client ID do seu OAuth App
-        // --- FIM DA CONFIGURAÇÃO ---
+/* ================= CONFIG ================= */
+const GITHUB_USER        = 'EliezerRosa';
+const GITHUB_REPO        = 'tpl-sistema';
+const ADMIN_USERNAME     = 'Zico';
+const GITHUB_CLIENT_ID   = 'Ov23liEwjAzKygVLClRS';
 
-        class TPLSystem {
-            constructor() { this.deviceId=null;this.userName=null;this.transactions=new Map();this.scheduleState=new Map();this.syncInterval=null;this.dbUrl=`https://${GITHUB_USER}.github.io/${GITHUB_REPO}/database.json`;this.dispatchUrl=`https://api.github.com/repos/${GITHUB_USER}/${GITHUB_REPO}/dispatches`;this.isPublishing=false;this.adminPat=null;this.init(); }
-            async init() { this.generateIdentity();this.loadLocalData();this.setupUI();await this.startAutoSync();this.log('Sistema inicializado.'); }generateIdentity() {
-    let e = localStorage.getItem('tpl_device_id');
-    if (!e) {
-        e = this.generateHash(Date.now() + Math.random().toString());
-        localStorage.setItem('tpl_device_id', e);
+const DAY_NAMES  = ['DOM','SEG','TER','QUA','QUI','SEX','SÁB'];
+const MONTH_NAMES = ['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho',
+                     'Agosto','Setembro','Outubro','Novembro','Dezembro'];
+const TIME_SLOTS = [
+  { label: '7:00',  hour: 7  },
+  { label: '9:00',  hour: 9  },
+  { label: '14:00', hour: 14 },
+  { label: '16:00', hour: 16 },
+  { label: '18:00', hour: 18 }
+];
+const DAYS_AHEAD = 32;
+/* ========================================== */
+
+class TPLSystem {
+  constructor() {
+    this.deviceId        = null;
+    this.userName        = null;
+    this.transactions    = new Map(); // id -> transação
+    this.scheduleState   = new Map(); // slotId -> idTransação vigente
+    this.syncInterval    = null;
+    this.isPublishing    = false;
+    this.adminPat        = null;
+
+    this.dbUrl       = `https://${GITHUB_USER}.github.io/${GITHUB_REPO}/database.json`;
+    this.dispatchUrl = `https://api.github.com/repos/${GITHUB_USER}/${GITHUB_REPO}/dispatches`;
+  }
+
+  /* ---------- Inicialização ---------- */
+  async init() {
+    this.initIdentity();
+    this.restoreTransactions();
+    this.renderInitialTable();
+    this.setupUI();
+    await this.startAutoSync();
+    this.log('Sistema inicializado.');
+  }
+
+  initIdentity() {
+    let id = localStorage.getItem('tpl_device_id');
+    if (!id) {
+      id = this.hash(Date.now() + ':' + Math.random());
+      localStorage.setItem('tpl_device_id', id);
     }
-    this.deviceId = e;
+    this.deviceId = id;
     this.userName = localStorage.getItem('tpl_user_name');
-    document.getElementById('deviceId').textContent = this.deviceId.substring(0, 8);
+    const devEl = document.getElementById('deviceId');
+    if (devEl) devEl.textContent = id.substring(0, 8);
+  }
+
+  /* ---------- Utilidades ---------- */
+  hash(seed) {
+    let h = 0;
+    for (let i = 0; i < seed.length; i++) {
+      h = (h << 5) - h + seed.charCodeAt(i);
+      h |= 0;
+    }
+    return 'h' + Math.abs(h).toString(36) + (Date.now() % 1000).toString(36);
+  }
+
+  log(msg, level = 'log') {
+    const panel = document.getElementById('logPanel');
+    const t = new Date().toLocaleTimeString();
+    const color =
+      level === 'error' ? '#f44336' :
+      level === 'warn'  ? '#ff9800' :
+      '#4caf50';
+    if (panel) {
+      panel.innerHTML += `<span style="color:${color}">[${t}] ${msg}</span><br>`;
+      panel.scrollTop = panel.scrollHeight;
+      panel.style.opacity = 1;
+      panel.style.pointerEvents = 'auto';
+      setTimeout(() => {
+        panel.style.opacity = 0;
+        panel.style.pointerEvents = 'none';
+      }, 5000);
+    }
+    // eslint-disable-next-line no-console
+    console[level === 'error' ? 'error' : level === 'warn' ? 'warn' : 'log'](`[TPL] ${msg}`);
+  }
+
+  /* ---------- Persistência Local ---------- */
+  restoreTransactions() {
+    try {
+      const saved = JSON.parse(localStorage.getItem('tpl_transactions') || '[]');
+      saved.forEach(tx => this.transactions.set(tx.id, tx));
+      this.rebuildSchedule();
+    } catch {
+      this.log('Falha ao carregar transações locais', 'warn');
+    }
+  }
+
+  saveTransactions() {
+    localStorage.setItem(
+      'tpl_transactions',
+      JSON.stringify(Array.from(this.transactions.values()))
+    );
+  }
+
+  /* ---------- UI ---------- */
+  setupUI() {
+    const nameSetup = document.getElementById('nameSetup');
+    const userNameEl = document.getElementById('userName');
+
+    if (this.userName) {
+      if (userNameEl) userNameEl.textContent = this.userName;
+      if (nameSetup) nameSetup.style.display = 'none';
+      if (this.userName === ADMIN_USERNAME) {
+        this.log('👑 Modo Admin', 'info');
+        this.showAdminPrompt();
+      }
+    } else if (nameSetup) {
+      nameSetup.style.display = 'block';
+    }
+
+    this.updateHeaderMonth();
+  }
+
+  updateHeaderMonth() {
+    const today = new Date();
+    const el = document.getElementById('monthTitle');
+    if (el) el.textContent = `Programação - ${MONTH_NAMES[today.getMonth()]} ${today.getFullYear()}`;
+  }
+
+  showAdminPrompt() {
+    const host = document.getElementById('nameSetup');
+    if (!host) return;
+    host.style.display = 'block';
+    host.innerHTML = `
+      <p><strong>👑 CONFIGURAÇÃO ADMIN</strong></p>
+      <input id="patInput" type="password" placeholder="Token PAT (repo)" style="width:300px;padding:10px;margin:10px auto;display:block">
+      <button onclick="saveAdminToken()" style="padding:10px 20px;background:#4CAF50;color:#fff;border:none;border-radius:4px;cursor:pointer">
+        Salvar Token
+      </button>
+      <p style="font-size:.8em;color:#666"><a href="https://github.com/settings/tokens" target="_blank">Criar Token</a></p>
+    `;
+  }
+
+  /* ---------- Tabela / Slots ---------- */
+  renderInitialTable() {
+    const tbody = document.getElementById('scheduleBody');
+    if (!tbody) return;
+    tbody.innerHTML = '';
+
+    const today = new Date();
+    const todayISO = today.toISOString().split('T')[0];
+    const currentHour = today.getHours();
+
+    for (let offset = 0; offset < DAYS_AHEAD; offset++) {
+      const date = new Date(today);
+      date.setDate(today.getDate() + offset);
+      const isoDate = date.toISOString().split('T')[0];
+      const pastDay = isoDate < todayISO;
+
+      const row = document.createElement('tr');
+      if (pastDay) row.classList.add('past-date');
+
+      const dateStr = date.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' });
+      const dayName = DAY_NAMES[date.getDay()];
+
+      const cellsHtml = TIME_SLOTS.map(ts => {
+        let inner = '';
+        for (let i = 0; i < 3; i++) {
+          const pastSlot = (isoDate === todayISO) && ts.hour < currentHour;
+          const classes = ['slot'];
+            if (pastSlot) classes.push('past-slot');
+          inner += `<div class="${classes.join(' ')}" data-slot-id="${isoDate}-${ts.label}-${i}"></div>`;
+        }
+        return `<td>${inner}</td>`;
+      }).join('');
+
+      let obs = '';
+      for (let i = 0; i < 3; i++) {
+        obs += `<div class="slot" data-slot-id="${isoDate}-obs-${i}"></div>`;
+      }
+
+      row.innerHTML = `
+        <td class="date-cell">${dateStr}</td>
+        <td class="day-of-week">${dayName}</td>
+        ${cellsHtml}
+        <td>${obs}</td>
+      `;
+      tbody.appendChild(row);
+    }
+
+    tbody.querySelectorAll('.slot').forEach(div => {
+      if (!div.closest('.past-date') && !div.classList.contains('past-slot')) {
+        div.addEventListener('click', () => handleSlotClick(div));
+      }
+    });
+  }
+
+  refreshSlots() {
+    document.querySelectorAll('.slot[data-slot-id]').forEach(div => {
+      const slotId = div.dataset.slotId;
+      const txId = this.scheduleState.get(slotId);
+      const tx = txId ? this.transactions.get(txId) : null;
+
+      div.className = 'slot'; // reset
+      div.textContent = '';
+
+      if (div.classList.contains('past-slot')) {
+        div.className = 'slot past-slot';
+        return;
+      }
+
+      if (tx && tx.data) {
+        div.textContent = tx.data.name;
+        div.classList.add(tx.ownerId === this.deviceId ? 'my-slot' : 'taken');
+        div.title = (tx.ownerId === this.deviceId)
+          ? 'Seu agendamento.'
+          : `Agendado por ${tx.data.name}`;
+      } else {
+        div.classList.add('available');
+      }
+    });
+
+    if (this.userName === ADMIN_USERNAME) {
+      this.enableAdminDrag();
+    }
+  }
+
+  enableAdminDrag() {
+    document.querySelectorAll('.slot').forEach(el => {
+      const mineOrTaken = el.classList.contains('my-slot') || el.classList.contains('taken');
+      const available = el.classList.contains('available');
+      if (mineOrTaken) {
+        el.draggable = true;
+        el.addEventListener('dragstart', this.onDragStart);
+      }
+      if (available) {
+        el.addEventListener('dragover', this.onDragOver);
+        el.addEventListener('dragleave', this.onDragLeave);
+        el.addEventListener('drop', this.onDrop);
+      }
+    });
+  }
+
+  /* ---------- Drag & Drop (admin) ---------- */
+  onDragStart = (e) => {
+    e.dataTransfer.setData('text/plain', e.target.dataset.slotId);
+    e.target.classList.add('dragging');
+  };
+
+  onDragOver = (e) => {
+    e.preventDefault();
+    e.target.classList.add('drop-target');
+  };
+
+  onDragLeave = (e) => {
+    e.target.classList.remove('drop-target');
+  };
+
+  onDrop = async (e) => {
+    e.preventDefault();
+    e.target.classList.remove('drop-target');
+    document.querySelector('.dragging')?.classList.remove('dragging');
+
+    const from = e.dataTransfer.getData('text/plain');
+    const targetSlot = e.target.closest('.slot');
+    if (!targetSlot) return;
+    const to = targetSlot.dataset.slotId;
+
+    if (!from || !to || from === to || !targetSlot.classList.contains('available')) return;
+
+    this.log(`👑 MOVE: ${from} -> ${to}`, 'info');
+    const currentTxId = this.scheduleState.get(from);
+    const currentTx = currentTxId ? this.transactions.get(currentTxId) : null;
+    if (currentTx && currentTx.data) {
+      await this.createTransaction(from, 'delete');
+      await this.createTransaction(to, 'set', currentTx.data);
+    }
+  };
+
+  /* ---------- Operações de Slot ---------- */
+  async toggleSlot(slotId) {
+    const currentTxId = this.scheduleState.get(slotId);
+    const currentTx   = currentTxId ? this.transactions.get(currentTxId) : null;
+
+    if (currentTx && currentTx.ownerId === this.deviceId) {
+      await this.createTransaction(slotId, 'delete');
+    } else if (!currentTx) {
+      await this.createTransaction(slotId, 'set');
+    }
+  }
+
+  async createTransaction(slotId, action, clonedData = null) {
+    const data = clonedData || (action === 'set'
+      ? { name: this.userName, deviceId: this.deviceId }
+      : null);
+
+    const tx = {
+      id:        this.hash(slotId + action + Date.now()),
+      timestamp: Date.now(),
+      slotId,
+      action,
+      ownerId:   this.deviceId,
+      data
+    };
+
+    this.transactions.set(tx.id, tx);
+    this.rebuildSchedule();
+    this.saveTransactions();
+    this.refreshSlots();
+    await this.sendSignal('nova-transacao', { transaction: JSON.stringify(tx) });
+  }
+
+  rebuildSchedule() {
+    this.scheduleState.clear();
+    const ordered = Array.from(this.transactions.values())
+      .sort((a, b) => a.timestamp - b.timestamp);
+    const map = new Map();
+
+    for (const tx of ordered) {
+      if (tx.action === 'set') {
+        if (!map.has(tx.slotId)) map.set(tx.slotId, tx.id);
+      } else if (tx.action === 'delete') {
+        const setId = map.get(tx.slotId);
+        if (setId) {
+          const ref = this.transactions.get(setId);
+          if (ref && ref.ownerId === tx.ownerId) {
+            map.delete(tx.slotId);
+          }
+        }
+      }
+    }
+    this.scheduleState = map;
+  }
+
+  /* ---------- GitHub Dispatch ---------- */
+  async sendSignal(eventType, payload, token = null) {
+    if (this.isPublishing) {
+      this.log('Aguarde publicação anterior.', 'warn');
+      return;
+    }
+    this.isPublishing = true;
+    try {
+      const headers = {
+        'Accept': 'application/vnd.github.v3+json',
+        'Content-Type': 'application/json'
+      };
+      if (token) headers.Authorization = `token ${token}`;
+      const resp = await fetch(this.dispatchUrl, {
+        method: 'POST',
+        headers,
+        body: JSON.stringify({ event_type: eventType, client_payload: payload })
+      });
+      if (resp.status !== 204) throw new Error('Status ' + resp.status);
+      this.log(`Sinal '${eventType}' enviado.`);
+    } catch (err) {
+      this.log(`Erro ao enviar sinal: ${err.message}`, 'error');
+    } finally {
+      this.isPublishing = false;
+    }
+  }
+
+  /* ---------- Sincronização "fake" (GitHub Pages) ---------- */
+  async fetchLatestData() {
+    this.updateSyncStatus('Sincronizando...');
+    try {
+      const resp = await fetch(`${this.dbUrl}?v=${Date.now()}`);
+      if (!resp.ok) throw new Error('Status ' + resp.status);
+      const json = await resp.json();
+      let added = 0;
+      if (Array.isArray(json?.transactions)) {
+        json.transactions.forEach(t => {
+          if (t && t.id && !this.transactions.has(t.id)) {
+            this.transactions.set(t.id, t);
+            added++;
+          }
+        });
+      }
+      if (added) {
+        this.log(`${added} novas transações.`);
+        this.rebuildSchedule();
+        this.saveTransactions();
+        this.refreshSlots();
+      }
+      this.updateSyncStatus(`Sincronizado às ${new Date().toLocaleTimeString()}`);
+    } catch (err) {
+      this.log(`ERRO DE SINCRONIZAÇÃO: ${err.message}`, 'error');
+      this.updateSyncStatus('Erro. Próxima tentativa em 30s.');
+    }
+  }
+
+  async startAutoSync() {
+    await this.fetchLatestData();
+    this.syncInterval = setInterval(() => this.fetchLatestData(), 30000);
+  }
+
+  updateSyncStatus(msg) {
+    const el = document.getElementById('syncStatus');
+    if (el) el.textContent = `⚡ ${msg}`;
+  }
+
+  /* ---------- Admin Token ---------- */
+  async saveAdminToken(token) {
+    try {
+      this.log('Salvando token admin...', 'info');
+      await this.sendSignal('configurar-admin-token', { adminToken: token }, token);
+    } catch (err) {
+      this.log(`Erro token: ${err.message}`, 'error');
+    }
+  }
 }
 
-            generateHash(e){let t=0;for(let o=0;o<e.length;o++)t=(t<<5)-t+e.charCodeAt(o),t|=0;return"h"+Math.abs(t).toString(36)+Math.abs(Date.now()%1e3).toString(36)}
-            loadLocalData(){const e=JSON.parse(localStorage.getItem("tpl_transactions")||"[]");e.forEach(t=>this.transactions.set(t.id,t));this.rebuildScheduleState()}
-            saveLocalData(){localStorage.setItem("tpl_transactions",JSON.stringify(Array.from(this.transactions.values())))}
-            setupUI(){this.handleOAuthCallback();if(this.userName){document.getElementById("userName").textContent=this.userName,document.getElementById("nameSetup").style.display="none";if(this.userName===ADMIN_USERNAME){this.log("👑 Modo Admin ativado.","info"),this.showAdminSetup()}}else document.getElementById("nameSetup").style.display="block"}
-            
-            showAdminSetup(){const e=document.getElementById("nameSetup");e.style.display="block",e.innerHTML=`<p><strong>👑 CONFIGURAÇÃO ADMIN NECESSÁRIA</strong></p><p style="font-size:.9em;color:#666;margin-bottom:15px">Configure o token GitHub UMA VEZ. Será usado por todos os usuários.</p><input type="password" id="patInput" placeholder="Cole seu Token PAT (repo)" style="width:300px;padding:10px;margin:10px auto;display:block"><button onclick="saveAdminToken()" style="padding:15px 30px;background:#4CAF50;color:#fff;border:none;border-radius:6px;cursor:pointer;font-size:16px;margin:10px">🔧 Configurar Token Mestre</button><p style="font-size:.8em;color:#666;margin-top:10px"><a href="https://github.com/settings/tokens" target="_blank">Criar Token GitHub</a></p>`}
-            
-            async saveAdminToken(e){try{this.log("Enviando Token Mestre para o cofre...","info"),await this.sendSignal("configurar-admin-token",{adminToken:e},e)}catch(e){this.log(`Erro ao salvar token: ${e.message}`,"error")}}
-            
-            async createTransaction(e,t,o=null){const n=o||("set"===t?{name:this.userName,deviceId:this.deviceId}:null),a={id:this.generateHash(e+t+Date.now()),timestamp:Date.now(),slotId:e,action:t,ownerId:this.deviceId,data:n};this.transactions.set(a.id,a),this.rebuildScheduleState(),this.saveLocalData(),updateTableView(),await this.sendSignal("nova-transacao",{transaction:JSON.stringify(a)})}
-            
-            rebuildScheduleState(){this.scheduleState.clear();const e=Array.from(this.transactions.values()).sort((e,t)=>e.timestamp-t.timestamp),t=new Map;e.forEach(e=>{if("set"===e.action){if(!t.has(e.slotId))t.set(e.slotId,e.id)}else if("delete"===e.action){const o=t.get(e.slotId);if(o){const n=this.transactions.get(o);n&&n.ownerId===e.ownerId&&t.delete(e.slotId)}}}),this.scheduleState=t}
-            
-            async sendSignal(e,t,o=null){if(this.isPublishing)return void this.log("Aguarde a publicação anterior.","warn");this.isPublishing=!0,this.log(`Enviando sinal '${e}'...`,"info");try{const n={method:"POST",mode:"cors",headers:{"Accept":"application/vnd.github.v3+json","Content-Type":"application/json"},body:JSON.stringify({event_type:e,client_payload:t})};o&&(n.headers.Authorization=`token ${o}`);const a=await fetch(this.dispatchUrl,n);if(204!==a.status)throw new Error(`Status ${a.status}`);this.log("Sinal enviado com sucesso!")}catch(e){this.log(`ERRO AO ENVIAR SINAL: ${e.message}.`,"error")}finally{this.isPublishing=!1}}
-            
-            async fetchLatestData(){this.updateSyncStatus("Sincronizando...");try{const e=await fetch(`${this.dbUrl}?v=${Date.now()}`);if(!e.ok)throw new Error(`Status ${e.status}`);const t=await e.json();let o=0;Array.isArray(t?.transactions)&&t.transactions.forEach(e=>{e&&e.id&&!this.transactions.has(e.id)&&(this.transactions.set(e.id,e),o++)}),o>0&&(this.log(`${o} novas transações sincronizadas.`),this.rebuildScheduleState(),this.saveLocalData(),updateTableView());const n=new Date().toLocaleTimeString();this.updateSyncStatus(`Sincronizado às ${n}`)}catch(e){this.log(`ERRO DE SINCRONIZAÇÃO: ${e.message}`,"error"),this.updateSyncStatus("Erro. Próxima tentativa em 30s.")}}
-            
-            async startAutoSync(){await this.fetchLatestData(),this.syncInterval=setInterval(()=>this.fetchLatestData(),30e3)}
-            updateSyncStatus(e){document.getElementById("syncStatus").textContent=`⚡ ${e}`}
-            log(e,t="log"){const o=document.getElementById("logPanel"),n=new Date().toLocaleTimeString();o.innerHTML+=`<span style="color:${"error"===t?"#f44336":"warn"===t?"#ff9800":"#4caf50"}">[${n}] ${e}</span><br>`,o.scrollTop=o.scrollHeight,console[t](`[TPL] ${e}`),o.style.opacity=1,o.style.pointerEvents="auto",setTimeout(()=>{o.style.opacity=0,o.style.pointerEvents="none"},5e3)}
-        }
-        
-        let tplSystem=null;
-        function setupUser(){const e=document.getElementById("nameInput").value.trim();e?(tplSystem.userName=e,localStorage.setItem("tpl_user_name",e),tplSystem.setupUI(),tplSystem.log("Configuração salva com sucesso!","info"),e===ADMIN_USERNAME&&redirectToGitHubAuth()):alert("Por favor, preencha seu nome.")}
-        function redirectToGitHubAuth(){const e=`https://github.com/login/oauth/authorize?client_id=${GITHUB_CLIENT_ID}&scope=repo,workflow`;window.location.href=e}
-        async function saveAdminToken(){const e=document.getElementById("patInput").value.trim();e?await tplSystem.saveAdminToken(e):alert("Cole o Token PAT.")}
-        function handleSlotClick(e){if(!tplSystem.userName)return alert("Configure seu nome para poder agendar."),void document.getElementById("nameSetup").style.display="block";const t=e.dataset.slotId,o=tplSystem.scheduleState.get(t),n=o?tplSystem.transactions.get(o):null;n&&n.ownerId===tplSystem.deviceId?tplSystem.createTransaction(t,"delete"):n||tplSystem.createTransaction(t,"set")}
-        function enableAdminFeatures(){document.querySelectorAll(".slot").forEach(e=>{const t=e.classList.contains("my-slot")||e.classList.contains("taken"),o=e.classList.contains("available");t&&(e.draggable=!0,e.addEventListener("dragstart",handleDragStart)),o&&(e.addEventListener("dragover",handleDragOver),e.addEventListener("dragleave",handleDragLeave),e.addEventListener("drop",handleDrop))})}
-        function handleDragStart(e){const t=e.target.dataset.slotId;e.dataTransfer.setData("text/plain",t),e.target.classList.add("dragging")}
-        function handleDragOver(e){e.preventDefault(),e.target.classList.add("drop-target")}
-        function handleDragLeave(e){e.target.classList.remove("drop-target")}
-        async function handleDrop(e){e.preventDefault(),e.target.classList.remove("drop-target"),document.querySelector(".dragging")?.classList.remove("dragging");const t=e.dataTransfer.getData("text/plain"),o=e.target.closest(".slot"),n=o.dataset.slotId;if(t&&n&&t!==n&&o.classList.contains("available")){tplSystem.log(`👑 ADMIN MOVE: Movendo de ${t} para ${n}`,"info");const a=tplSystem.scheduleState.get(t),s=tplSystem.transactions.get(a);s&&s.data&&(await tplSystem.createTransaction(t,"delete"),await tplSystem.createTransaction(n,"set",s.data))}}
-        
-        function generateScheduleTable(){ const tbody = document.getElementById('scheduleBody'); if (!tbody) return; tbody.innerHTML=""; const today = new Date(); const todayStr = today.toISOString().split("T")[0]; const currentHour = today.getHours(); document.getElementById("monthTitle").textContent=`Programação - ${["Janeiro","Fevereiro","Março","Abril","Maio","Junho","Julho","Agosto","Setembro","Outubro","Novembro","Dezembro"][today.getMonth()]} ${today.getFullYear()}`; const dayNames=["DOM","SEG","TER","QUA","QUI","SEX","SÁB"],timeSlots=[{ label: "7:00", hour: 7 }, { label: "9:00", hour: 9 }, { label: "14:00", hour: 14 }, { label: "16:00", hour: 16 }, { label: "18:00", hour: 18 }]; for(let i=0; i < 32; i++){ const date = new Date(today); date.setDate(today.getDate() + i); const dateStr = date.toLocaleDateString("pt-BR",{day:"2-digit",month:"2-digit"}), isoDate = date.toISOString().split("T")[0]; const isPastDay = isoDate < todayStr; const isToday = isoDate === todayStr; const row = document.createElement("tr"); if (isPastDay) row.classList.add("past-date"); const timeCells = timeSlots.map(time => { let slotsHtml = ''; for (let j = 0; j < 3; j++) { let slotClass = "slot"; if (isToday && time.hour < currentHour) { slotClass += " past-slot"; } slotsHtml += `<div class="${slotClass}" data-slot-id="${isoDate}-${time.label}-${j}"></div>`; } return `<td>${slotsHtml}</td>`; }).join(""); let obsSlotsHtml = ''; for (let j = 0; j < 3; j++) { obsSlotsHtml += `<div class="slot" data-slot-id="${isoDate}-obs-${j}"></div>`; } row.innerHTML = `<td class="date-cell">${dateStr}</td><td class="day-of-week">${dayNames[date.getDay()]}</td>${timeCells}<td>${obsSlotsHtml}</td>`; tbody.appendChild(row); } tbody.querySelectorAll(".slot").forEach(slot => { if (!slot.closest(".past-date") && !slot.classList.contains("past-slot")) { slot.addEventListener("click", () => handleSlotClick(slot)); } }); }
-        
-        function updateTableView(){document.querySelectorAll(".slot[data-slot-id]").forEach(e=>{const t=e.dataset.slotId,o=tplSystem.scheduleState.get(t),n=o?tplSystem.transactions.get(o):null;e.className="slot",e.textContent="",e.classList.contains("past-slot")&&(e.className="slot past-slot");const a=e.querySelector(".transaction-hash");a&&a.remove(),n&&n.data?(e.textContent=n.data.name,e.classList.add(n.ownerId===tplSystem.deviceId?"my-slot":"taken"),e.title=n.ownerId===tplSystem.deviceId?"Seu agendamento.":`Agendado por ${n.data.name}`):e.classList.add("available")}),tplSystem&&tplSystem.userName===ADMIN_USERNAME&&enableAdminFeatures()}
-        
-        document.addEventListener("DOMContentLoaded",()=>{generateScheduleTable(),tplSystem=new TPLSystem(),updateTableView()});
-    </script>
-</body>
-</html>
+/* =========== Funções de Interface (globais) =========== */
+let tplSystem = null;
+
+function setupUser() {
+  const input = document.getElementById('nameInput');
+  if (!input) return;
+  const name = input.value.trim();
+  if (!name) {
+    alert('Informe seu nome.');
+    return;
+  }
+  tplSystem.userName = name;
+  localStorage.setItem('tpl_user_name', name);
+  tplSystem.setupUI();
+  tplSystem.refreshSlots();
+  tplSystem.log('Nome salvo!');
+  if (name === ADMIN_USERNAME) redirectToGitHubAuth();
+}
+
+function redirectToGitHubAuth() {
+  const url = `https://github.com/login/oauth/authorize?client_id=${GITHUB_CLIENT_ID}&scope=repo,workflow`;
+  window.location.href = url;
+}
+
+async function saveAdminToken() {
+  const input = document.getElementById('patInput');
+  if (!input) return;
+  const token = input.value.trim();
+  if (!token) { alert('Cole o Token PAT.'); return; }
+  await tplSystem.saveAdminToken(token);
+}
+
+function handleSlotClick(el) {
+  if (!tplSystem.userName) {
+    alert('Configure seu nome antes.');
+    document.getElementById('nameSetup').style.display = 'block';
+    return;
+  }
+  tplSystem.toggleSlot(el.dataset.slotId);
+}
+
+/* =========== Bootstrap DOM =========== */
+document.addEventListener('DOMContentLoaded', async () => {
+  tplSystem = new TPLSystem();
+  await tplSystem.init();
+  tplSystem.refreshSlots();
+});
+
+/* Expor globais necessárias ao HTML inline */
+window.setupUser = setupUser;
+window.saveAdminToken = saveAdminToken;
