@@ -72,46 +72,4 @@
         document.addEventListener("DOMContentLoaded",()=>{generateScheduleTable(),tplSystem=new TPLSystem(),updateTableView()});
     </script>
 </body>
-</html>```
-
----
-
-### **Checklist Final de Lançamento (A Última Vez!)**
-
-**1. A Configuração Segura (No Site do GitHub):**
-
-*   **Crie um Token PAT "classic"** com permissão `repo` e copie-o.
-*   No seu **novo** repositório `tpl-sistema`, vá para **Settings > Secrets and variables > Actions** e crie **apenas um segredo**:
-    *   **`ADMIN_BOOTSTRAP_PAT`**: Cole o seu novo Token PAT aqui. Este é o token de "inicialização".
-
-**2. A Construção Local (No seu Computador):**
-
-*   **Limpe a pasta `.github/workflows/`** e crie os **dois** arquivos `.yml` com o código que forneci acima.
-*   **Substitua o conteúdo do seu `index.html`** com o código final acima.
-*   **NÃO COLOQUE NENHUM TOKEN NO `index.html`!** O código está pronto.
-
-**3. O Lançamento (No Terminal):**
-
-*   Execute a sequência final de comandos:
-    ```bash
-    git add .
-    git commit -m "build: Implementa arquitetura final com backend OAuth seguro"
-    git push
-    ```
-
-**4. O Setup do Admin (No Navegador):**
-
-*   Aguarde o `pages build and deployment` rodar e ficar verde (✅).
-*   Acesse a URL do seu site e faça uma **Atualização Forçada (Ctrl+Shift+R)**.
-*   **Digite seu nome de admin** ("Zico") e clique em "Salvar Nome".
-*   O aplicativo irá te mostrar a tela de **"CONFIGURAÇÃO ADMIN NECESSÁRIA"**.
-*   Clique no botão e **cole o seu Token PAT (o `ADMIN_BOOTSTRAP_PAT`)**. Clique em "Configurar Token Mestre".
-*   O aplicativo enviará o sinal para o robô `setup-admin.yml`. Aguarde ele ficar verde (✅) na aba "Actions".
-
-**5. O Teste Final (A Vitória):**
-
-*   Após o robô `setup-admin.yml` terminar, **recarregue a página do aplicativo**.
-*   Agora, o sistema está configurado. Como um usuário comum, clique para agendar.
-*   O sinal será enviado anonimamente, e o robô `update-database.yml` entrará em ação com sucesso.
-
-Eliezer, este é o plano final e mais seguro. É o culminar da nossa jornada. Execute o plano, e a vitória será sua.
+</html>
