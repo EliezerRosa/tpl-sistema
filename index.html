@@ -35,8 +35,17 @@
 
         class TPLSystem {
             constructor() { this.deviceId=null;this.userName=null;this.transactions=new Map();this.scheduleState=new Map();this.syncInterval=null;this.dbUrl=`https://${GITHUB_USER}.github.io/${GITHUB_REPO}/database.json`;this.dispatchUrl=`https://api.github.com/repos/${GITHUB_USER}/${GITHUB_REPO}/dispatches`;this.isPublishing=false;this.adminPat=null;this.init(); }
-            async init() { this.generateIdentity();this.loadLocalData();this.setupUI();await this.startAutoSync();this.log('Sistema inicializado.'); }
-            generateIdentity() { let e=localStorage.getItem('tpl_device_id');e||(e=this.generateHash(Date.now()+Math.random().toString()),localStorage.setItem('tpl_device_id',e)),this.deviceId=e,this.userName=localStorage.getItem('tpl_user_name'),document.getElementById('deviceId').textContent=this.deviceId.substring(0,8) }
+            async init() { this.generateIdentity();this.loadLocalData();this.setupUI();await this.startAutoSync();this.log('Sistema inicializado.'); }generateIdentity() {
+    let e = localStorage.getItem('tpl_device_id');
+    if (!e) {
+        e = this.generateHash(Date.now() + Math.random().toString());
+        localStorage.setItem('tpl_device_id', e);
+    }
+    this.deviceId = e;
+    this.userName = localStorage.getItem('tpl_user_name');
+    document.getElementById('deviceId').textContent = this.deviceId.substring(0, 8);
+}
+
             generateHash(e){let t=0;for(let o=0;o<e.length;o++)t=(t<<5)-t+e.charCodeAt(o),t|=0;return"h"+Math.abs(t).toString(36)+Math.abs(Date.now()%1e3).toString(36)}
             loadLocalData(){const e=JSON.parse(localStorage.getItem("tpl_transactions")||"[]");e.forEach(t=>this.transactions.set(t.id,t));this.rebuildScheduleState()}
             saveLocalData(){localStorage.setItem("tpl_transactions",JSON.stringify(Array.from(this.transactions.values())))}
