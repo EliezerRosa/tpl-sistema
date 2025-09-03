@@ -1,3 +1,31 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TPL - Sistema Automatizado</title>
+    <!-- CSS completo incluído -->
+    <style>
+        body { font-family: sans-serif; margin: 20px; background-color: #f5f5f5; } h1, h2 { text-align: center; margin-bottom: 5px; } h1 { color: white; background-color: #c00000; padding: 10px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.2); } h2 { color: white; background-color: #ff8c00; padding: 8px; font-size: 1.1em; margin-bottom: 20px; border-radius: 6px; box-shadow: 0 1px 3px rgba(0,0,0,0.2); } #sync-controls { display: flex; justify-content: center; align-items: center; gap: 20px; padding: 15px; background-color: #e3f2fd; border: 1px solid #2196f3; border-radius: 8px; margin-bottom: 20px; } #syncStatus { font-weight: bold; color: #1565c0; } #user-status { text-align: center; margin-bottom: 15px; font-size: 0.9em; background: white; padding: 15px; border-radius: 6px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); } .user-id { color: #666; font-family: monospace; font-size: 0.8em; } .user-name { color: #2c5aa0; font-weight: bold; font-size: 1.2em; margin: 5px 0; } .name-setup { background: #e3f2fd; border: 2px dashed #2196f3; padding: 20px; margin: 15px 0; border-radius: 8px; text-align: center; } .name-setup input { padding: 10px 15px; border: 1px solid #ddd; border-radius: 4px; font-size: 1em; margin: 10px; width: 300px; } .name-setup button { padding: 10px 20px; background-color: #4CAF50; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 1em; } .name-setup button:hover { background-color: #45a049; } table { width: 100%; border-collapse: collapse; border: 2px solid black; box-shadow: 0 4px 8px rgba(0,0,0,0.1); background: white; border-radius: 8px; overflow: hidden; } th, td { border: 1px solid #a0a0a0; padding: 8px; text-align: left; vertical-align: top; } thead th { background-color: #fff2cc; font-weight: bold; text-align: center; border-bottom: 2px solid black; position: sticky; top: 0; z-index: 10; } .header-dia { width: 100px; } .header-dayofweek { width: 25px; } .header-time { width: 120px; } .header-obs { width: 150px; } tbody td { background-color: #ffffcc; } .date-cell, .day-of-week { background-color: #f2f2f2; font-weight: bold; text-align: center; vertical-align: middle; } .day-of-week { writing-mode: vertical-rl; transform: rotate(180deg); padding: 8px 2px; width: 25px; } .slot { display: block; min-height: 20px; border-bottom: 1px solid #ccc; margin-bottom: 2px; font-size: 0.9em; padding: 4px; cursor: pointer; border-radius: 4px; transition: all 0.3s ease; position: relative; } .slot.available { background-color: #e8f5e8; border: 1px dashed #4caf50; } .slot.available:hover { background-color: #c8e6c9; border-style: solid; transform: scale(1.02); } .slot.my-slot { background-color: #fff3e0; border: 1px solid #ff9800; color: #e65100; font-weight: 500; } .slot.my-slot:hover { background-color: #ffe0b2; box-shadow: 0 2px 4px rgba(255, 152, 0, 0.3); } .slot.taken { background-color: #e3f2fd; border: 1px solid #2196f3; color: #1565c0; cursor: not-allowed; } .past-date { opacity: 0.6; background-color: #eeeeee; } .past-date .slot, .past-slot { cursor: not-allowed !important; background-color: #eeeeee !important; color: #b0b0b0 !important; border-style: solid !important; border-color: #ddd !important; text-decoration: line-through; } .log-panel { position: fixed; bottom: 10px; right: 10px; background: rgba(0,0,0,0.8); color: #0f0; padding: 10px; border-radius: 8px; font-family: monospace; font-size: 10px; max-width: 350px; max-height: 150px; overflow-y: auto; z-index: 1000; opacity: 0; transition: opacity 0.5s; pointer-events: none;} .slot[draggable="true"] { cursor: grab !important; } .slot.dragging { opacity: 0.4; border: 2px dashed #c00000; } .slot.drop-target { background-color: #b3e5fc !important; border: 2px solid #01579b !important; }
+    </style>
+</head>
+<body>
+    <h1>TPL - Sistema Automatizado</h1>
+    <h2 id="monthTitle">Programação Semanal Permanente</h2>
+    <div id="sync-controls"> <div id="syncStatus">⚡ Conectando...</div> </div>
+    <div id="user-status"> <div class="user-name" id="userName">Configurar Nome</div> <div class="user-id">ID: <span id="deviceId"></span></div> </div>
+    <div id="nameSetup" class="name-setup">
+        <p><strong>Para participar, configure seu nome:</strong></p>
+        <input type="text" id="nameInput" placeholder="Digite seu nome" maxlength="30">
+        <button onclick="setupUser()">Salvar Nome</button>
+    </div>
+    <table id="scheduleTable">
+        <thead> <tr> <th class="header-dia">DIA</th><th class="header-dayofweek"></th> <th class="header-time">Manhã<br>7:00</th><th class="header-time">Manhã<br>9:00</th> <th class="header-time">Tarde<br>14:00</th><th class="header-time">Tardinha<br>16:00</th> <th class="header-time">Noite<br>18:00</th><th class="header-obs">Observações</th> </tr> </thead>
+        <tbody id="scheduleBody"></tbody>
+    </table>
+    <div class="log-panel" id="logPanel"></div>
+
+    <script>
 /* ================= CONFIG ================= */
 const GITHUB_USER        = 'EliezerRosa';
 const GITHUB_REPO        = 'tpl-sistema';
@@ -459,4 +487,6 @@ document.addEventListener('DOMContentLoaded', async () => {
 
 /* Expor globais necessárias ao HTML inline */
 window.setupUser = setupUser;
-window.saveAdminToken = saveAdminToken;
+window.saveAdminToken = saveAdminToken;    </script>
+</body>
+</html>
