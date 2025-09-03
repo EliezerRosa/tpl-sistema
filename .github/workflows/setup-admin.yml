@@ -1,0 +1,18 @@
+# Nome do nosso robô de configuração
+name: Setup Admin Token
+on:
+  repository_dispatch:
+    types: [configurar-admin-token]
+jobs:
+  setup:
+    runs-on: ubuntu-latest
+    permissions:
+      secrets: write # Permissão crucial para escrever no cofre
+    steps:
+      - name: Save Admin PAT as Repository Secret
+        uses: hmanstr/actions-create-secret@v2.0.0
+        with:
+          name: 'APP_ACCESS_TOKEN'
+          value: ${{ github.event.client_payload.adminToken }}
+          # Usa o token de bootstrap do admin para ter permissão para criar o segredo
+          token: ${{ secrets.ADMIN_BOOTSTRAP_PAT }}

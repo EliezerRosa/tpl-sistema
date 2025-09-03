@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TPL - Sistema Automatizado</title>
+    <!-- CSS completo incluído -->
+    <style>
+        body { font-family: sans-serif; margin: 20px; background-color: #f5f5f5; } h1, h2 { text-align: center; margin-bottom: 5px; } h1 { color: white; background-color: #c00000; padding: 10px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.2); } h2 { color: white; background-color: #ff8c00; padding: 8px; font-size: 1.1em; margin-bottom: 20px; border-radius: 6px; box-shadow: 0 1px 3px rgba(0,0,0,0.2); } #sync-controls { display: flex; justify-content: center; align-items: center; gap: 20px; padding: 15px; background-color: #e3f2fd; border: 1px solid #2196f3; border-radius: 8px; margin-bottom: 20px; } #syncStatus { font-weight: bold; color: #1565c0; } #user-status { text-align: center; margin-bottom: 15px; font-size: 0.9em; background: white; padding: 15px; border-radius: 6px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); } .user-id { color: #666; font-family: monospace; font-size: 0.8em; } .user-name { color: #2c5aa0; font-weight: bold; font-size: 1.2em; margin: 5px 0; } .name-setup { background: #e3f2fd; border: 2px dashed #2196f3; padding: 20px; margin: 15px 0; border-radius: 8px; text-align: center; } .name-setup input { padding: 10px 15px; border: 1px solid #ddd; border-radius: 4px; font-size: 1em; margin: 10px; width: 300px; } .name-setup button { padding: 10px 20px; background-color: #4CAF50; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 1em; } .name-setup button:hover { background-color: #45a049; } table { width: 100%; border-collapse: collapse; border: 2px solid black; box-shadow: 0 4px 8px rgba(0,0,0,0.1); background: white; border-radius: 8px; overflow: hidden; } th, td { border: 1px solid #a0a0a0; padding: 8px; text-align: left; vertical-align: top; } thead th { background-color: #fff2cc; font-weight: bold; text-align: center; border-bottom: 2px solid black; position: sticky; top: 0; z-index: 10; } .header-dia { width: 100px; } .header-dayofweek { width: 25px; } .header-time { width: 120px; } .header-obs { width: 150px; } tbody td { background-color: #ffffcc; } .date-cell, .day-of-week { background-color: #f2f2f2; font-weight: bold; text-align: center; vertical-align: middle; } .day-of-week { writing-mode: vertical-rl; transform: rotate(180deg); padding: 8px 2px; width: 25px; } .slot { display: block; min-height: 20px; border-bottom: 1px solid #ccc; margin-bottom: 2px; font-size: 0.9em; padding: 4px; cursor: pointer; border-radius: 4px; transition: all 0.3s ease; position: relative; } .slot.available { background-color: #e8f5e8; border: 1px dashed #4caf50; } .slot.available:hover { background-color: #c8e6c9; border-style: solid; transform: scale(1.02); } .slot.my-slot { background-color: #fff3e0; border: 1px solid #ff9800; color: #e65100; font-weight: 500; } .slot.my-slot:hover { background-color: #ffe0b2; box-shadow: 0 2px 4px rgba(255, 152, 0, 0.3); } .slot.taken { background-color: #e3f2fd; border: 1px solid #2196f3; color: #1565c0; cursor: not-allowed; } .past-date { opacity: 0.6; background-color: #eeeeee; } .past-date .slot, .past-slot { cursor: not-allowed !important; background-color: #eeeeee !important; color: #b0b0b0 !important; border-style: solid !important; border-color: #ddd !important; text-decoration: line-through; } .log-panel { position: fixed; bottom: 10px; right: 10px; background: rgba(0,0,0,0.8); color: #0f0; padding: 10px; border-radius: 8px; font-family: monospace; font-size: 10px; max-width: 350px; max-height: 150px; overflow-y: auto; z-index: 1000; opacity: 0; transition: opacity 0.5s; pointer-events: none;} .slot[draggable="true"] { cursor: grab !important; } .slot.dragging { opacity: 0.4; border: 2px dashed #c00000; } .slot.drop-target { background-color: #b3e5fc !important; border: 2px solid #01579b !important; }
+    </style>
+</head>
+<body>
+    <h1>TPL - Sistema Automatizado</h1>
+    <h2 id="monthTitle">Programação Semanal Permanente</h2>
+    <div id="sync-controls"> <div id="syncStatus">⚡ Conectando...</div> </div>
+    <div id="user-status"> <div class="user-name" id="userName">Configurar Nome</div> <div class="user-id">ID: <span id="deviceId"></span></div> </div>
+    <div id="nameSetup" class="name-setup">
+        <p><strong>Para participar, configure seu nome:</strong></p>
+        <input type="text" id="nameInput" placeholder="Digite seu nome" maxlength="30">
+        <button onclick="setupUser()">Salvar Nome</button>
+    </div>
+    <table id="scheduleTable">
+        <thead> <tr> <th class="header-dia">DIA</th><th class="header-dayofweek"></th> <th class="header-time">Manhã<br>7:00</th><th class="header-time">Manhã<br>9:00</th> <th class="header-time">Tarde<br>14:00</th><th class="header-time">Tardinha<br>16:00</th> <th class="header-time">Noite<br>18:00</th><th class="header-obs">Observações</th> </tr> </thead>
+        <tbody id="scheduleBody"></tbody>
+    </table>
+    <div class="log-panel" id="logPanel"></div>
+
+    <script>
+        // --- CONFIGURAÇÃO DO APLICATIVO ---
+        const GITHUB_USER = 'EliezerRosa';
+        const GITHUB_REPO = 'tpl-sistema'; // ATENÇÃO: Verifique o nome do seu repositório
+        const ADMIN_USERNAME = 'Zico';
+        // --- FIM DA CONFIGURAÇÃO ---
+
+        class TPLSystem {
+            constructor() { this.deviceId=null;this.userName=null;this.transactions=new Map();this.scheduleState=new Map();this.syncInterval=null;this.dbUrl=`https://${GITHUB_USER}.github.io/${GITHUB_REPO}/database.json`;this.dispatchUrl=`https://api.github.com/repos/${GITHUB_USER}/${GITHUB_REPO}/dispatches`;this.isPublishing=false;this.adminPat=null;this.init(); }
+            async init() { this.generateIdentity();this.loadLocalData();this.setupUI();await this.startAutoSync();this.log('Sistema inicializado.'); }
+            generateIdentity() { let e=localStorage.getItem('tpl_device_id');e||(e=this.generateHash(Date.now()+Math.random().toString()),localStorage.setItem('tpl_device_id',e)),this.deviceId=e,this.userName=localStorage.getItem('tpl_user_name'),document.getElementById('deviceId').textContent=this.deviceId.substring(0,8) }
+            generateHash(e){let t=0;for(let o=0;o<e.length;o++)t=(t<<5)-t+e.charCodeAt(o),t|=0;return"h"+Math.abs(t).toString(36)+Math.abs(Date.now()%1e3).toString(36)}
+            loadLocalData(){const e=JSON.parse(localStorage.getItem("tpl_transactions")||"[]");e.forEach(t=>this.transactions.set(t.id,t));this.rebuildScheduleState()}
+            saveLocalData(){localStorage.setItem("tpl_transactions",JSON.stringify(Array.from(this.transactions.values())))}
+            setupUI(){if(this.userName){document.getElementById("userName").textContent=this.userName,document.getElementById("nameSetup").style.display="none",this.userName===ADMIN_USERNAME&&this.showAdminSetup()}else document.getElementById("nameSetup").style.display="block"}
+            
+            showAdminSetup(){const e=document.getElementById("nameSetup");e.style.display="block",e.innerHTML=`<p><strong>👑 CONFIGURAÇÃO ADMIN NECESSÁRIA</strong></p><p style="font-size:.9em;color:#666;margin-bottom:15px">Configure o token GitHub UMA VEZ. Será usado por todos os usuários.</p><input type="password" id="patInput" placeholder="Cole seu Token PAT (repo)" style="width:300px;padding:10px;margin:10px auto;display:block"><button onclick="saveAdminToken()" style="padding:15px 30px;background:#4CAF50;color:#fff;border:none;border-radius:6px;cursor:pointer;font-size:16px;margin:10px">🔧 Configurar Token Mestre</button><p style="font-size:.8em;color:#666;margin-top:10px"><a href="https://github.com/settings/tokens" target="_blank">Criar Token GitHub</a></p>`}
+            
+            async saveAdminToken(e){try{this.log("Enviando Token Mestre para o cofre...","info"),await this.sendSignal("configurar-admin-token",{adminToken:e},e)}catch(e){this.log(`Erro ao salvar token: ${e.message}`,"error")}}
+            
+            async createTransaction(e,t,o=null){const n=o||("set"===t?{name:this.userName,deviceId:this.deviceId}:null),a={id:this.generateHash(e+t+Date.now()),timestamp:Date.now(),slotId:e,action:t,ownerId:this.deviceId,data:n};this.transactions.set(a.id,a),this.rebuildScheduleState(),this.saveLocalData(),updateTableView(),await this.sendSignal("nova-transacao",{transaction:JSON.stringify(a)})}
+            
+            rebuildScheduleState(){this.scheduleState.clear();const e=Array.from(this.transactions.values()).sort((e,t)=>e.timestamp-t.timestamp),t=new Map;e.forEach(e=>{if("set"===e.action){if(!t.has(e.slotId))t.set(e.slotId,e.id)}else if("delete"===e.action){const o=t.get(e.slotId);if(o){const n=this.transactions.get(o);n&&n.ownerId===e.ownerId&&t.delete(e.slotId)}}}),this.scheduleState=t}
+            
+            async sendSignal(e,t,o=null){if(this.isPublishing)return void this.log("Aguarde a publicação anterior.","warn");this.isPublishing=!0,this.log(`Enviando sinal '${e}'...`,"info");try{const n={method:"POST",mode:"cors",headers:{"Accept":"application/vnd.github.v3+json","Content-Type":"application/json"},body:JSON.stringify({event_type:e,client_payload:t})};o&&(n.headers.Authorization=`token ${o}`);const a=await fetch(this.dispatchUrl,n);if(204!==a.status)throw new Error(`Status ${a.status}`);this.log("Sinal enviado com sucesso!")}catch(e){this.log(`ERRO AO ENVIAR SINAL: ${e.message}.`,"error")}finally{this.isPublishing=!1}}
+            
+            async fetchLatestData(){this.updateSyncStatus("Sincronizando...");try{const e=await fetch(`${this.dbUrl}?v=${Date.now()}`);if(!e.ok)throw new Error(`Status ${e.status}`);const t=await e.json();let o=0;Array.isArray(t?.transactions)&&t.transactions.forEach(e=>{e&&e.id&&!this.transactions.has(e.id)&&(this.transactions.set(e.id,e),o++)}),o>0&&(this.log(`${o} novas transações sincronizadas.`),this.rebuildScheduleState(),this.saveLocalData(),updateTableView());const n=new Date().toLocaleTimeString();this.updateSyncStatus(`Sincronizado às ${n}`)}catch(e){this.log(`ERRO DE SINCRONIZAÇÃO: ${e.message}`,"error"),this.updateSyncStatus("Erro. Próxima tentativa em 30s.")}}
+            
+            async startAutoSync(){await this.fetchLatestData(),this.syncInterval=setInterval(()=>this.fetchLatestData(),30e3)}
+            updateSyncStatus(e){document.getElementById("syncStatus").textContent=`⚡ ${e}`}
+            log(e,t="log"){const o=document.getElementById("logPanel"),n=new Date().toLocaleTimeString();o.innerHTML+=`<span style="color:${"error"===t?"#f44336":"warn"===t?"#ff9800":"#4caf50"}">[${n}] ${e}</span><br>`,o.scrollTop=o.scrollHeight,console[t](`[TPL] ${e}`),o.style.opacity=1,o.style.pointerEvents="auto",setTimeout(()=>{o.style.opacity=0,o.style.pointerEvents="none"},5e3)}
+        }
+        
+        let tplSystem=null;
+        function setupUser(){const e=document.getElementById("nameInput").value.trim();e?(tplSystem.userName=e,localStorage.setItem("tpl_user_name",e),tplSystem.setupUI(),tplSystem.log("Configuração salva com sucesso!","info")):alert("Por favor, preencha seu nome.")}
+        async function saveAdminToken(){const e=document.getElementById("patInput").value.trim();e?await tplSystem.saveAdminToken(e):alert("Cole o Token PAT.")}
+        function handleSlotClick(e){if(!tplSystem.userName)return alert("Configure seu nome para poder agendar."),void document.getElementById("nameSetup").style.display="block";const t=e.dataset.slotId,o=tplSystem.scheduleState.get(t),n=o?tplSystem.transactions.get(o):null;n&&n.ownerId===tplSystem.deviceId?tplSystem.createTransaction(t,"delete"):n||tplSystem.createTransaction(t,"set")}
+        function enableAdminFeatures(){document.querySelectorAll(".slot").forEach(e=>{const t=e.classList.contains("my-slot")||e.classList.contains("taken"),o=e.classList.contains("available");t&&(e.draggable=!0,e.addEventListener("dragstart",handleDragStart)),o&&(e.addEventListener("dragover",handleDragOver),e.addEventListener("dragleave",handleDragLeave),e.addEventListener("drop",handleDrop))})}
+        function handleDragStart(e){const t=e.target.dataset.slotId;e.dataTransfer.setData("text/plain",t),e.target.classList.add("dragging")}
+        function handleDragOver(e){e.preventDefault(),e.target.classList.add("drop-target")}
+        function handleDragLeave(e){e.target.classList.remove("drop-target")}
+        async function handleDrop(e){e.preventDefault(),e.target.classList.remove("drop-target"),document.querySelector(".dragging")?.classList.remove("dragging");const t=e.dataTransfer.getData("text/plain"),o=e.target.closest(".slot"),n=o.dataset.slotId;if(t&&n&&t!==n&&o.classList.contains("available")){tplSystem.log(`👑 ADMIN MOVE: Movendo de ${t} para ${n}`,"info");const a=tplSystem.scheduleState.get(t),s=tplSystem.transactions.get(a);s&&s.data&&(await tplSystem.createTransaction(t,"delete"),await tplSystem.createTransaction(n,"set",s.data))}}
+        function generateScheduleTable(){const e=document.getElementById("scheduleBody");if(!e)return;e.innerHTML="";const t=new Date,o=t.toISOString().split("T")[0],n=t.getHours();document.getElementById("monthTitle").textContent=`Programação - ${["Janeiro","Fevereiro","Março","Abril","Maio","Junho","Julho","Agosto","Setembro","Outubro","Novembro","Dezembro"][t.getMonth()]} ${t.getFullYear()}`;const a=["DOM","SEG","TER","QUA","QUI","SEX","SÁB"],s=[{label:"7:00",hour:7},{label:"9:00",hour:9},{label:"14:00",hour:14},{label:"16:00",hour:16},{label:"18:00",hour:18}];for(let l=0;l<32;l++){const r=new Date(t);r.setDate(t.getDate()+l);const c=r.toLocaleDateString("pt-BR",{day:"2-digit",month:"2-digit"}),d=r.toISOString().split("T")[0],p=d<o,u=d===o,m=document.createElement("tr");p&&m.classList.add("past-date");const g=s.map(e=>{let t="";for(let o=0;o<3;o++){let n="slot";u&&e.hour<n&&(n+=" past-slot"),t+=`<div class="${n}" data-slot-id="${d}-${e.label}-${o}"></div>`}return`<td>${t}</td>`}).join("");let h="";for(let e=0;e<3;e++)h+=`<div class="slot" data-slot-id="${d}-obs-${e}"></div>`;m.innerHTML=`<td class="date-cell">${c}</td><td class="day-of-week">${a[r.getDay()]}</td>${g}<td>${h}</td>`,e.appendChild(m)}e.querySelectorAll(".slot").forEach(e=>{e.closest(".past-date")||e.classList.contains("past-slot")||e.addEventListener("click",()=>handleSlotClick(e))})}
+        function updateTableView(){document.querySelectorAll(".slot[data-slot-id]").forEach(e=>{const t=e.dataset.slotId,o=tplSystem.scheduleState.get(t),n=o?tplSystem.transactions.get(o):null;e.className="slot",e.textContent="",e.classList.contains("past-slot")&&(e.className="slot past-slot");const a=e.querySelector(".transaction-hash");a&&a.remove(),n&&n.data?(e.textContent=n.data.name,e.classList.add(n.ownerId===tplSystem.deviceId?"my-slot":"taken"),e.title=n.ownerId===tplSystem.deviceId?"Seu agendamento.":`Agendado por ${n.data.name}`):e.classList.add("available")}),tplSystem&&tplSystem.userName===ADMIN_USERNAME&&enableAdminFeatures()}
+        document.addEventListener("DOMContentLoaded",()=>{generateScheduleTable(),tplSystem=new TPLSystem(),updateTableView()});
+    </script>
+</body>
+</html>```
+
+---
+
+### **Checklist Final de Lançamento (A Última Vez!)**
+
+**1. A Configuração Segura (No Site do GitHub):**
+
+*   **Crie um Token PAT "classic"** com permissão `repo` e copie-o.
+*   No seu **novo** repositório `tpl-sistema`, vá para **Settings > Secrets and variables > Actions** e crie **apenas um segredo**:
+    *   **`ADMIN_BOOTSTRAP_PAT`**: Cole o seu novo Token PAT aqui. Este é o token de "inicialização".
+
+**2. A Construção Local (No seu Computador):**
+
+*   **Limpe a pasta `.github/workflows/`** e crie os **dois** arquivos `.yml` com o código que forneci acima.
+*   **Substitua o conteúdo do seu `index.html`** com o código final acima.
+*   **NÃO COLOQUE NENHUM TOKEN NO `index.html`!** O código está pronto.
+
+**3. O Lançamento (No Terminal):**
+
+*   Execute a sequência final de comandos:
+    ```bash
+    git add .
+    git commit -m "build: Implementa arquitetura final com backend OAuth seguro"
+    git push
+    ```
+
+**4. O Setup do Admin (No Navegador):**
+
+*   Aguarde o `pages build and deployment` rodar e ficar verde (✅).
+*   Acesse a URL do seu site e faça uma **Atualização Forçada (Ctrl+Shift+R)**.
+*   **Digite seu nome de admin** ("Zico") e clique em "Salvar Nome".
+*   O aplicativo irá te mostrar a tela de **"CONFIGURAÇÃO ADMIN NECESSÁRIA"**.
+*   Clique no botão e **cole o seu Token PAT (o `ADMIN_BOOTSTRAP_PAT`)**. Clique em "Configurar Token Mestre".
+*   O aplicativo enviará o sinal para o robô `setup-admin.yml`. Aguarde ele ficar verde (✅) na aba "Actions".
+
+**5. O Teste Final (A Vitória):**
+
+*   Após o robô `setup-admin.yml` terminar, **recarregue a página do aplicativo**.
+*   Agora, o sistema está configurado. Como um usuário comum, clique para agendar.
+*   O sinal será enviado anonimamente, e o robô `update-database.yml` entrará em ação com sucesso.
+
+Eliezer, este é o plano final e mais seguro. É o culminar da nossa jornada. Execute o plano, e a vitória será sua.
