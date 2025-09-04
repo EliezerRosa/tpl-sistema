@@ -5,17 +5,13 @@ on:
     types: [configurar-admin-token]
 
 jobs:
-  save-admin-token:
+  confirm-admin-token:
     runs-on: ubuntu-latest
-
     steps:
-      - name: Validar evento
+      - name: Exibir confirmação
         run: |
-          echo "Evento recebido: ${{ github.event.action }}"
-          echo "Payload: ${{ github.event.client_payload.adminToken }}" | sed 's/./*/g'
-
-      - name: Configurar Secret (requer permissões manuais)
-        run: |
-          echo "⚠️ Importante: o GitHub Actions não pode criar/atualizar secrets sozinho."
-          echo "Cole o token admin manualmente em: https://github.com/${{ github.repository }}/settings/secrets/actions"
-          echo "Nome do secret sugerido: TPL_ADMIN_TOKEN"
+          echo "Evento recebido: configurar-admin-token"
+          echo "Um Personal Access Token foi enviado pelo front-end."
+          echo "⚠️ Atenção: o GitHub Actions não pode salvar secrets automaticamente."
+          echo "Já que você cadastrou o Secret ADMIN_BOOTSTRAP_PAT manualmente,"
+          echo "não é necessário fazer mais nada aqui."
